@@ -9,7 +9,17 @@ GThread *widget_threads[LENGTH(wkline_widgets)];
 gboolean
 update_widget (widget_data_t *widget_data) {
 	char *script_template = "if(typeof widgets!=='undefined'){try{widgets.update('%s',%s)}catch(e){console.log('Could not update widget: '+e)}}";
-	char script[4096];
+	int script_length = 0;
+	char *script;
+
+	// Get the length of the script payload.
+	script_length = snprintf(NULL,
+	                         0,
+	                         script_template,
+	                         widget_data->widget,
+	                         widget_data->data);
+	// Add 1 for \0
+	script = malloc(script_length + 1);
 
 #ifdef DEBUG_JSON
 	wklog("Updating widget %s: %s", widget_data->widget, widget_data->data);
@@ -18,6 +28,7 @@ update_widget (widget_data_t *widget_data) {
 
 	webkit_web_view_execute_script(web_view, script);
 	free(widget_data);
+	free(script);
 
 	return FALSE; // only run once
 }
@@ -77,11 +88,12 @@ main (int argc, char *argv[]) {
 
 	// get window size
 	screen = gtk_window_get_screen(window);
-	gdk_screen_get_monitor_geometry (screen, 0, &dest);
+	gdk_screen_get_monitor_geometry (screen, wkline_monitor, &dest);
 	dim.w = dest.width; 
 	dim.h = wkline_height; /* defined in config.h */
 
 	// set window dock properties
+	gtk_window_move(window, dest.x, 0);
 	gtk_window_set_default_size(window, dim.w, dim.h);
 	gtk_window_stick(window);	
 	gtk_window_set_decorated(window, FALSE);
